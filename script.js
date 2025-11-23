@@ -1,5 +1,7 @@
-// UPDATED script.js - robust with error handling + event listener
+// FINAL script.js - network-safe, slang loading, event-listener, robust UX
+
 const CONTRACT_ADDRESS = "0x3732Bcf0bf4E92356fc0DC19B6b373846f04c44b";
+const DESIRED_CHAIN_ID = "0xaa36a7"; // Sepolia hex chain id
 
 const ABI = [
   {
@@ -21,13 +23,49 @@ const ABI = [
 ];
 
 let provider, signer, contract;
+let slangIntervalId = null;
+const privacySlangs = [
+  "Shh... encrypting your secrets 🤫",
+  "Hiding data from nosy squirrels 🐿️",
+  "Scrambling bytes like a secret recipe 🧪",
+  "Putting your age in a velvet bag 👜",
+  "Mixing in cryptographic glitter ✨",
+  "Sealing your info in a tiny safe 🔐",
+  "Masking details like a mystery novel 🕵️",
+  "Whispering your age to the blockchain winds 🌬️",
+  "Cooking privacy—low heat, high secrecy 🍳",
+  "Wrapping data in a cloak of stealth 🦉"
+];
 
-async function connect() {
+// ensure user is on Sepolia and connected
+async function ensureSepoliaAndConnect() {
+  if (!window.ethereum) {
+    updateStatus("MetaMask not detected. Install MetaMask and retry.", true);
+    throw new Error("no metamask");
+  }
+
   try {
-    if (!window.ethereum) {
-      updateStatus("MetaMask not detected. Install MetaMask and retry.");
-      return;
+    const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+    document.getElementById("network-name").innerText = currentChainId || "unknown";
+
+    if (currentChainId !== DESIRED_CHAIN_ID) {
+      // Attempt to switch
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: DESIRED_CHAIN_ID }],
+        });
+        // update shown network
+        document.getElementById("network-name").innerText = DESIRED_CHAIN_ID;
+      } catch (switchErr) {
+        // If the chain isn't added, optionally attempt to add (some wallets may reject)
+        // We'll show a friendly message and throw to prevent any mainnet txs.
+        console.warn("switch error", switchErr);
+        updateStatus("Please switch your MetaMask network to Sepolia (testnet). Auto-switch failed.", true);
+        throw new Error("network not sepolia");
+      }
     }
+
     provider = new ethers.providers.Web3Provider(window.ethereum);
     await provider.send("eth_requestAccounts", []);
     signer = provider.getSigner();
@@ -35,26 +73,72 @@ async function connect() {
     document.getElementById("wallet").innerText = addr;
     contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
 
-    // Listen for AgeCheckRequested events (any user)
-    // We'll update UI when the event is seen on-chain.
+    // Listen for AgeCheckRequested events and show result
     contract.on("AgeCheckRequested", (user, ciphertext, event) => {
-      // event.transactionHash is available
       console.log("AgeCheckRequested event:", { user, ciphertext, txHash: event.transactionHash });
       handleAgeCheckEvent(user, ciphertext, event.transactionHash);
     });
 
-    updateStatus("Connected to wallet. Ready.");
+    updateStatus("Connected to Sepolia and ready.");
+    document.getElementById("network-name").innerText = "Sepolia";
+    return true;
   } catch (err) {
-    console.error("connect error:", err);
-    updateStatus("Error connecting wallet: " + (err.message || err));
+    console.error("ensureSepoliaAndConnect error:", err);
+    throw err;
   }
 }
-connect();
 
-function updateStatus(text, isError = false) {
+// initial connect attempt
+(async function init() {
+  try {
+    await ensureSepoliaAndConnect();
+  } catch (e) {
+    // user must manually switch network - nothing else to do
+    console.log("Init: waiting for user to switch networks.");
+  }
+})();
+
+function updateStatus(text, isError = false, showSpinner = false) {
   const el = document.getElementById("status");
-  el.innerText = text;
-  el.style.color = isError ? "#ffb3b3" : "#cce7ff";
+  el.innerHTML = "";
+  if (showSpinner) {
+    const s = document.createElement("div");
+    s.className = "spinner";
+    el.appendChild(s);
+  }
+  const span = document.createElement("div");
+  span.className = "status-text";
+  span.innerText = text;
+  el.appendChild(span);
+  el.style.color = isError ? "#ff9b9b" : "#fff";
+}
+
+function startSlangRotation() {
+  if (slangIntervalId) return;
+  const el = document.getElementById("status");
+  let slangSpan = el.querySelector(".privacy-slang");
+  if (!slangSpan) {
+    slangSpan = document.createElement("div");
+    slangSpan.className = "privacy-slang";
+    slangSpan.style.marginLeft = "12px";
+    el.appendChild(slangSpan);
+  }
+  let idx = 0;
+  slangSpan.innerText = privacySlangs[idx];
+  slangIntervalId = setInterval(() => {
+    idx = (idx + 1) % privacySlangs.length;
+    slangSpan.innerText = privacySlangs[idx];
+  }, 1200);
+}
+
+function stopSlangRotation() {
+  if (slangIntervalId) {
+    clearInterval(slangIntervalId);
+    slangIntervalId = null;
+    const el = document.getElementById("status");
+    const slangSpan = el.querySelector(".privacy-slang");
+    if (slangSpan) slangSpan.remove();
+  }
 }
 
 function fakeEncrypt(age) {
@@ -63,114 +147,117 @@ function fakeEncrypt(age) {
 
 async function encryptAndSubmit() {
   try {
-    if (!contract) {
-      updateStatus("Wallet not connected or contract not ready.", true);
-      await connect(); // try connecting again
-      if (!contract) return;
+    // ensure Sepolia and connected
+    try {
+      await ensureSepoliaAndConnect();
+    } catch (e) {
+      // ensureSepoliaAndConnect will set status — stop here
+      return;
     }
 
-    const age = document.getElementById("age").value;
-    if (!age) { updateStatus("Enter an age first", true); return; }
-    const ct = fakeEncrypt(age);
+    const ageVal = document.getElementById("age").value;
+    if (!ageVal) { updateStatus("Enter an age first", true); return; }
+    const ct = fakeEncrypt(ageVal);
 
-    updateStatus("Sending encrypted age... (confirm MetaMask)");
+    updateStatus("Sending encrypted age... (confirm in MetaMask)", false, true);
+    startSlangRotation();
 
     let tx;
     try {
       tx = await contract.setEncryptedAge(ct);
     } catch (sendErr) {
       console.error("transaction send error:", sendErr);
+      stopSlangRotation();
       updateStatus("Transaction rejected or failed to send.", true);
       return;
     }
 
-    updateStatus("Transaction sent. Waiting for confirmation... Tx: " + tx.hash);
-
-    // Wait for 1 confirmation
+    updateStatus("Transaction sent. Waiting for confirmation... (tx: " + tx.hash + ")", false, true);
     const receipt = await tx.wait(1).catch(e => {
       console.error("wait error:", e);
       return null;
     });
+
+    stopSlangRotation();
 
     if (!receipt) {
       updateStatus("Could not confirm transaction. Check console or Etherscan.", true);
       return;
     }
 
-    updateStatus("Encrypted age submitted and confirmed! (tx: " + tx.hash + ")");
+    updateStatus("Encrypted age submitted and confirmed! (tx: " + tx.hash + ")", false);
     console.log("submit receipt:", receipt);
   } catch (err) {
     console.error("encryptAndSubmit error:", err);
+    stopSlangRotation();
     updateStatus("Unexpected error: " + (err.message || err), true);
   }
 }
 
 async function requestCheck() {
   try {
-    if (!contract) {
-      updateStatus("Wallet not connected or contract not ready.", true);
-      await connect();
-      if (!contract) return;
+    try {
+      await ensureSepoliaAndConnect();
+    } catch (e) {
+      return;
     }
 
     const user = await signer.getAddress();
 
-    updateStatus("Requesting check... (confirm MetaMask)");
+    updateStatus("Requesting check... (confirm in MetaMask)", false, true);
+    startSlangRotation();
 
     let tx;
     try {
       tx = await contract.requestCheck(user);
     } catch (sendErr) {
       console.error("request send error:", sendErr);
+      stopSlangRotation();
       updateStatus("Transaction rejected or failed to send.", true);
       return;
     }
 
-    updateStatus("Request transaction sent. Waiting for confirmation... Tx: " + tx.hash);
-
+    updateStatus("Request tx sent. Waiting for confirmation... (tx: " + tx.hash + ")", false, true);
     const receipt = await tx.wait(1).catch(e => {
       console.error("wait error:", e);
       return null;
     });
+
+    stopSlangRotation();
 
     if (!receipt) {
       updateStatus("Could not confirm request transaction. Check console or Etherscan.", true);
       return;
     }
 
-    updateStatus("Request confirmed on-chain. Waiting for coprocessor (simulated) or event.");
+    updateStatus("Request confirmed on-chain. Waiting for coprocessor (simulated) or event.", false);
     console.log("request receipt:", receipt);
-    // The event listener (contract.on) will catch the event and show result.
   } catch (err) {
     console.error("requestCheck error:", err);
+    stopSlangRotation();
     updateStatus("Unexpected error: " + (err.message || err), true);
   }
 }
 
-// Called when AgeCheckRequested event arrives
 async function handleAgeCheckEvent(user, ciphertext, txHash) {
   try {
-    // For demo: parse our fake ciphertext to get the age
     let display = "";
     try {
-      const txt = ethers.utils.toUtf8String(ciphertext);
-      display = txt; // "encrypted:25"
+      display = ethers.utils.toUtf8String(ciphertext);
     } catch (e) {
       display = "ciphertext (non-utf8)";
     }
 
-    // If ciphertext is in the "encrypted:AGE" format we used, extract number and compute age check
     let isAdultMsg = "Result unknown";
     if (display.startsWith("encrypted:")) {
-      const yearOrAge = display.split(":")[1];
-      const num = parseInt(yearOrAge);
+      const ageStr = display.split(":")[1];
+      const num = parseInt(ageStr);
       if (!isNaN(num)) {
-        // we stored age directly in this demo
         isAdultMsg = (num >= 18) ? "User is an adult ✅" : "User is NOT an adult ❌";
       }
     }
 
-    updateStatus(`Event seen (tx ${txHash}). ${isAdultMsg}`);
+    updateStatus(`Event seen (tx ${txHash}). ${isAdultMsg}`, false);
   } catch (err) {
     console.error("handleAgeCheckEvent error:", err);
     updateStatus("Received event but failed to parse result.", true);
