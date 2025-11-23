@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Confidential Age Demo (FHE Prototype)</title>
+</head>
+<body style="font-family: Arial; padding: 20px; max-width: 600px;">
+  <h2>Confidential Age Checker — FHE-Style Demo</h2>
+
+  <p><b>Wallet:</b> <span id="wallet">Not connected</span></p>
+
+  <input id="age" placeholder="Enter your age" style="padding:8px; margin-right:10px;" />
+  <button onclick="encryptAndSubmit()">Encrypt & Submit</button>
+
+  <br><br>
+
+  <button onclick="requestCheck()">Request Check</button>
+
+  <p id="status" style="margin-top:20px; font-weight:bold;"></p>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="./script.js"></script>
+</body>
+</html>
