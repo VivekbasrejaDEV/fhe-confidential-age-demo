@@ -1,22 +1,50 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Confidential Age Demo (FHE Prototype)</title>
+  <meta charset="UTF-8">
+  <title>Confidential Age Checker — FHE Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Style -->
+  <link rel="stylesheet" href="./style.css">
 </head>
-<body style="font-family: Arial; padding: 20px; max-width: 600px;">
-  <h2>Confidential Age Checker — FHE-Style Demo</h2>
 
-  <p><b>Wallet:</b> <span id="wallet">Not connected</span></p>
+<body>
+  <div class="container">
+    <h2>Confidential Age Checker — FHE-Style Demo</h2>
 
-  <input id="age" placeholder="Enter your age" style="padding:8px; margin-right:10px;" />
-  <button onclick="encryptAndSubmit()">Encrypt & Submit</button>
+    <div class="sub">
+      Privacy-focused prototype using encrypted on-chain data + event-based verification.
+    </div>
 
-  <br><br>
+    <!-- Wallet -->
+    <div class="wallet">
+      Wallet:
+      <div class="addr" id="wallet">Not connected</div>
+    </div>
 
-  <button onclick="requestCheck()">Request Check</button>
+    <!-- AGE INPUT + SUBMIT -->
+    <div class="row">
+      <input id="age" type="number" placeholder="Enter your age" />
+      <button onclick="encryptAndSubmit()">Encrypt & Submit</button>
+    </div>
 
-  <p id="status" style="margin-top:20px; font-weight:bold;"></p>
+    <!-- REQUEST CHECK -->
+    <div class="row">
+      <button onclick="requestCheck()">Request Check</button>
+    </div>
 
+    <!-- STATUS BOX -->
+    <div id="status">Status will appear here</div>
+
+    <!-- FOOTER -->
+    <div class="foot">
+      Deployed Contract:
+      <code>0x3732Bcf0bf4E92356fc0DC19B6b373846f04c44b</code>
+    </div>
+  </div>
+
+  <!-- Ethers + App Script -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <script src="./script.js"></script>
 </body>
