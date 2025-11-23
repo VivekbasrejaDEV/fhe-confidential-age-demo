@@ -1,50 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Confidential Age Checker — FHE Demo</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <!-- Style -->
-  <link rel="stylesheet" href="./style.css">
+  <meta charset="utf-8" />
+  <title>Confidential Age Checker — FHE Demo (Testnet)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="./style.css" />
 </head>
-
 <body>
   <div class="container">
-    <h2>Confidential Age Checker — FHE-Style Demo</h2>
-
-    <div class="sub">
-      Privacy-focused prototype using encrypted on-chain data + event-based verification.
+    <div class="top">
+      <div>
+        <h2>Confidential Age Checker</h2>
+        <div class="sub">FHE-style prototype — client-side ciphertext stored on-chain. <span class="badge">TESTNET ONLY</span></div>
+      </div>
+      <div class="brand">Privacy • Confidential • Zama-style</div>
     </div>
 
-    <!-- Wallet -->
-    <div class="wallet">
-      Wallet:
+    <div class="wallet-row">
+      <div class="wallet-label">Wallet</div>
       <div class="addr" id="wallet">Not connected</div>
     </div>
 
-    <!-- AGE INPUT + SUBMIT -->
     <div class="row">
-      <input id="age" type="number" placeholder="Enter your age" />
-      <button onclick="encryptAndSubmit()">Encrypt & Submit</button>
+      <input id="age" type="number" placeholder="Enter your age (e.g. 25)" />
+      <button id="btn-submit" onclick="encryptAndSubmit()">Encrypt & Submit</button>
     </div>
 
-    <!-- REQUEST CHECK -->
     <div class="row">
-      <button onclick="requestCheck()">Request Check</button>
+      <button class="secondary" onclick="requestCheck()">Request Check</button>
+      <div class="network-note" id="network-note">Network: <span id="network-name">unknown</span></div>
     </div>
 
-    <!-- STATUS BOX -->
     <div id="status">Status will appear here</div>
 
-    <!-- FOOTER -->
     <div class="foot">
-      Deployed Contract:
-      <code>0x3732Bcf0bf4E92356fc0DC19B6b373846f04c44b</code>
+      Contract: <code>0x3732Bcf0bf4E92356fc0DC19B6b373846f04c44b</code>
+      &nbsp;•&nbsp; Repo: your-github/fhe-confidential-age-demo
     </div>
   </div>
 
-  <!-- Ethers + App Script -->
+  <!-- Ethers + App -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <script src="./script.js"></script>
 </body>
